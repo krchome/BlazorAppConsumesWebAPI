@@ -1,0 +1,153 @@
+﻿@page "/customer-list"
+@using WebAPI.Consumer.Services
+@using WebAPI.Consumer.Models
+@inject CustomerService customerService
+
+
+
+<h3>Customer List</h3>
+
+@if (customers == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Contact</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var customer in customers)
+            {
+                <tr>
+                    <td>@customer.Id</td>
+                    <td>@customer.FirstName</td>
+                    <td>@customer.LastName</td>
+                    <td>@customer.Contact</td>
+                    <td>@customer.Email</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="pagination">
+        @if (currentPage > 1)
+        {
+            <button class="btn btn-primary" @onclick="LoadFirstPage">First</button>
+            <button class="btn btn-primary" @onclick="() => LoadData(currentPage - 1)">Previous</button>
+        }
+        @if (totalPages <= maxPageButtonsToShow)
+        {
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                int pageNumber = i; // Create a local variable to capture the current page number
+                if (i == currentPage)
+                {
+                    <button class="btn btn-primary disabled">@i</button>
+                }
+                else
+                {
+                    <button class="btn btn-primary" @onclick="() => LoadData(pageNumber)">@i</button>
+                }
+            }
+        }
+        else
+        {
+            // Show ellipsis ("...") icon if not on the first page
+            if (currentPage > 1)
+            {
+                <span class="ellipsis">...</span>
+            }
+
+            // Calculate start and end page numbers to display
+            int startPage = currentPage - maxPageButtonsToShow / 2;
+            int endPage = currentPage + maxPageButtonsToShow / 2;
+
+            // Ensure startPage and endPage are within the valid range
+            if (startPage < 1)
+            {
+                startPage = 1;
+                endPage = maxPageButtonsToShow;
+            }
+            else if (endPage > totalPages)
+            {
+                endPage = totalPages;
+                startPage = totalPages - maxPageButtonsToShow + 1;
+            }
+
+            // Display page number buttons
+            for (int i = startPage; i <= endPage; i++)
+            {
+                int pageNumber = i;
+                if (i == currentPage)
+                {
+                    <button class="btn btn-primary disabled">@i</button>
+                }
+                else
+                {
+                    <button class="btn btn-primary" @onclick="() => LoadData(pageNumber)">@i</button>
+                }
+            }
+
+            // Show ellipsis ("...") icon if not on the last page
+            if (currentPage < totalPages)
+            {
+                <span class="ellipsis">...</span>
+            }
+        }
+        @if (currentPage < totalPages)
+        {
+            <button class="btn btn-primary" @onclick="() => LoadData(currentPage + 1)">Next</button>
+            <button class="btn btn-primary" @onclick="LoadLastPage">Last</button>
+        }
+    </div>
+
+}
+
+@code {
+    private List<Customer> customers;
+    private int currentPage = 1;
+    private int totalPages;
+    bool showFirstLastLinks = false;
+    int maxPageButtonsToShow = 25;
+
+    private async Task LoadData(int pageNumber)
+    {
+        var pagedResponse = await customerService.GetCustomersAsync(pageNumber, PageSize);
+
+        if (pagedResponse != null)
+        {
+            customers = pagedResponse.Data;
+            currentPage = pagedResponse.PageNumber;
+            totalPages = pagedResponse.TotalPages;
+        }
+        else
+        {
+            customers = null;
+            
+        }
+    }
+    async Task LoadFirstPage()
+    {
+       await LoadData(1);
+    }
+
+    async Task LoadLastPage()
+    {
+       await LoadData(totalPages);
+    }
+    
+    private const int PageSize = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData(1);
+    }
+}
